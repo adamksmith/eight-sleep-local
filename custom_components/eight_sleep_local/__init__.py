@@ -1,43 +1,33 @@
-import asyncio
+# __init__.py
 import logging
-
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 
-DOMAIN = "eight_sleep_local"
-PLATFORMS = ["sensor"]
+from .const import DOMAIN
 
 _LOGGER = logging.getLogger(__name__)
 
-async def async_setup(hass: HomeAssistant, config: dict):
-    """
-    Called if the user adds the configuration via configuration.yaml
-    or if discovered automatically. Typically we rely on async_setup_entry
-    with ConfigEntries, but for a basic example, you might implement manual config here.
-    """
-    # We won't implement manual config in this example, so just return True
+PLATFORMS = ["sensor"]
+
+async def async_setup(hass, config):
+    """Set up integration via YAML is not supported; only config flow."""
     return True
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
-    """
-    This sets up the integration from a ConfigEntry (if you had a config_flow),
-    or from an automatically created entry. We'll forward to sensor platform.
-    """
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+    """Set up from a config entry (created by config flow)."""
+    _LOGGER.debug("Setting up eight_sleep_local entry: %s", entry.data)
+
+    # Store config entry data (like host/port) in hass.data if needed
     hass.data.setdefault(DOMAIN, {})
-    # Store any needed data about the config entry if needed
-    # For example, host/port might be in entry.data
+    hass.data[DOMAIN][entry.entry_id] = entry.data
 
-    _LOGGER.debug("Setting up Eight Sleep Local integration")
-
-    # Forward entry setup to the sensor platform (and any other platforms you have)
-    hass.config_entries.async_setup_platforms(entry, PLATFORMS)
+    # Forward setup to platforms (sensor, etc.)
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    """
-    Handle removal of an entry.
-    """
+    """Unload a config entry."""
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
     if unload_ok:
-        hass.data[DOMAIN].pop(entry.entry_id, None)
+        hass.data[DOMAIN].pop(entry.entry_id)
     return unload_ok
