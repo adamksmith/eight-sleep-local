@@ -98,20 +98,20 @@ class LocalEightSleep:
         Fetch the status from the local /api/deviceStatus endpoint.
         Store the response in a rolling 10-element list (_device_json_list).
         """
-        url = f"http://{self._host}:{self._port}/api/deviceStatus"
-        _LOGGER.debug(f"Fetching device data from {url}")
+        api_slug = "/api/deviceStatus"
+        _LOGGER.debug(f"Fetching device data from {api_slug}")
 
-        assert self._api_session is not None, "Session not initialized. Call `start()` first."
+        # Make the GET request.
+        # api_request will return the parsed JSON or None if there's an error.
+        data = await self.api_request("GET", api_slug, {})
 
-        try:
-            async with self._api_session.get(url) as resp:
-                if resp.status != 200:
-                    _LOGGER.error(f"Received unexpected status code: {resp.status}")
-                    return
-                data = await resp.json()
-                self.handle_device_json(data)
-        except (ClientError, asyncio.TimeoutError, ConnectionRefusedError) as err:
-            _LOGGER.error(f"Error fetching local device data: {err}")
+        # If `data` is None, it means something went wrong (e.g., non-200 status,
+        # or an exception occurred) and is already logged in `api_request`.
+        if not data:
+            return
+
+        # Process the device JSON
+        self.handle_device_json(data)
 
     def handle_device_json(self, data: Dict[str, Any]) -> None:
         """
@@ -129,13 +129,24 @@ class LocalEightSleep:
             return self._device_json_list[0]
         return {}
 
-    @property
-    def device_data_history(self) -> List[Dict[str, Any]]:
-        """
-        Return the rolling list of device status responses.
-        """
-        return self._device_json_list
 
+    @property
+    async def api_request(
+            self,
+            method: str,
+            api_slug: str,
+            data: dict[str, Any]
+    ):
+        assert self._api_session is not None, "Session not initialized. Call `start()` first."
+        url = f"http://{self._host}:{self._port}{api_slug}"
+        try:
+            async with self._api_session.request(method, url, json=data) as resp:
+                if resp.status != 200:
+                    _LOGGER.error(f"Received unexpected status code: {resp.status}")
+                    return
+                return await resp.json()
+        except (ClientError, asyncio.TimeoutError, ConnectionRefusedError) as err:
+            _LOGGER.error(f"Error fetching local device data: {err}")
     # -------------------------------------------------------------------------
     # Below are convenience properties to pull out the fields from the JSON.
     # Adjust/extend these as you see fit. This matches the sample JSON structure
