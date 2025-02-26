@@ -15,7 +15,7 @@ from .local_eight_sleep import LocalEightSleep
 
 _LOGGER = logging.getLogger(__name__)
 
-UPDATE_INTERVAL = timedelta(seconds=30)  # Poll every 30s (adjust as desired)
+UPDATE_INTERVAL = timedelta(seconds=5)  # Poll every 30s (adjust as desired)
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback):
     """
