@@ -1,7 +1,7 @@
 import logging
 from datetime import timedelta
 
-from homeassistant.components.sensor import SensorEntity
+from homeassistant.components.sensor import SensorEntity, SensorEntityDescription
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -187,7 +187,7 @@ class EightSleepTempSensor(SensorEntity):
 
         # If this sensor is measuring temperature in Fahrenheit:
         self._attr_device_class = SensorDeviceClass.TEMPERATURE
-        self._attr_native_unit_of_measurement = "°F"
+        self._attr_native_unit_of_measurement = SensorEntityDescription.native_unit_of_measurement="°F"
         self._attr_state_class = SensorStateClass.MEASUREMENT
 
         # If you have a unique ID available:
