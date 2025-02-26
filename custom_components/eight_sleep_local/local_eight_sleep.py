@@ -136,11 +136,11 @@ class LocalEightSleep:
             method: str,
             api_slug: str,
             data: dict[str, Any]
-    ):
+    ) -> Any:
         assert self._api_session is not None, "Session not initialized. Call `start()` first."
         url = f"http://{self._host}:{self._port}{api_slug}"
         try:
-            async with self._api_session.request(method, url, json=data) as resp:
+            async with self._api_session.request(method = method, url = url, json=data) as resp:
                 if resp.status != 200:
                     _LOGGER.error(f"Received unexpected status code: {resp.status}")
                     return
