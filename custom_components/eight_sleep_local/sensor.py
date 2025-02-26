@@ -33,6 +33,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
     client = LocalEightSleep(host=host, port=port)
 
+    await client.start()
     # Create a coordinator to manage fetching data
     coordinator = EightSleepDataUpdateCoordinator(hass, client=client, update_interval=UPDATE_INTERVAL)
 
