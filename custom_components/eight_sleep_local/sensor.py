@@ -9,6 +9,12 @@ from homeassistant.helpers.update_coordinator import (
     DataUpdateCoordinator,
     CoordinatorEntity,
 )
+from homeassistant.components.sensor import (
+    SensorEntity,
+    SensorDeviceClass,
+    SensorStateClass,
+)
+from homeassistant.const import TEMP_FAHRENHEIT
 
 from . import DOMAIN
 from .local_eight_sleep import LocalEightSleep
@@ -42,16 +48,16 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_e
 
     # Create sensor entities for left & right sides
     left_entities = [
-        EightSleepSensor(coordinator, "left_current_temp_f", side="left"),
-        EightSleepSensor(coordinator, "left_target_temp_f", side="left"),
+        EightSleepTempSensor(coordinator, "left_current_temp_f", side="left"),
+        EightSleepTempSensor(coordinator, "left_target_temp_f", side="left"),
         EightSleepSensor(coordinator, "left_seconds_remaining", side="left"),
         EightSleepSensor(coordinator, "left_is_alarm_vibrating", side="left"),
         EightSleepSensor(coordinator, "left_is_on", side="left"),
     ]
 
     right_entities = [
-        EightSleepSensor(coordinator, "right_current_temp_f", side="right"),
-        EightSleepSensor(coordinator, "right_target_temp_f", side="right"),
+        EightSleepTempSensor(coordinator, "right_current_temp_f", side="right"),
+        EightSleepTempSensor(coordinator, "right_target_temp_f", side="right"),
         EightSleepSensor(coordinator, "right_seconds_remaining", side="right"),
         EightSleepSensor(coordinator, "right_is_alarm_vibrating", side="right"),
         EightSleepSensor(coordinator, "right_is_on", side="right"),
@@ -167,3 +173,33 @@ class EightSleepSensor(CoordinatorEntity, SensorEntity):
             "manufacturer": "Eight Sleep (Local)",
             "model": "Pod vLocal",  # You can set a custom model or read from device data
         }
+class EightSleepTempSensor(SensorEntity):
+    """Define a basic Eight Sleep Sensor."""
+
+    def __init__(self, coordinator, sensor_key, side="left"):
+        """Initialize the sensor."""
+        self._coordinator = coordinator
+        self._sensor_key = sensor_key
+        self._side = side
+
+        # Give this sensor a name based on side/key
+        self._attr_name = f"{side.capitalize()} {sensor_key.replace('_', ' ')}"
+
+        # If this sensor is measuring temperature in Fahrenheit:
+        self._attr_device_class = SensorDeviceClass.TEMPERATURE
+        self._attr_native_unit_of_measurement = TEMP_FAHRENHEIT
+        self._attr_state_class = SensorStateClass.MEASUREMENT
+
+        # If you have a unique ID available:
+        self._attr_unique_id = f"eight_sleep_{side}_{sensor_key}"
+
+    @property
+    def native_value(self):
+        """Return the current value for this sensor."""
+        # Pull the latest data from the coordinator (example).
+        # Adjust the path to match how your data is exposed.
+        return self._coordinator.data.get(self._sensor_key, None)
+
+    async def async_update(self):
+        """Use coordinator to update the data."""
+        await self._coordinator.async_request_refresh()
