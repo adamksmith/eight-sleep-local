@@ -187,7 +187,7 @@ class EightSleepTempSensor(SensorEntity):
 
         # If this sensor is measuring temperature in Fahrenheit:
         self._attr_device_class = SensorDeviceClass.TEMPERATURE
-        self._attr_native_unit_of_measurement = SensorEntityDescription.native_unit_of_measurement="°F"
+        # self._attr_native_unit_of_measurement = SensorEntityDescription.native_unit_of_measurement="°F"
         self._attr_state_class = SensorStateClass.MEASUREMENT
 
         # If you have a unique ID available:
