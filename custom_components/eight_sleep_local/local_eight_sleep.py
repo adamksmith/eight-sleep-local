@@ -130,7 +130,7 @@ class LocalEightSleep:
         return {}
 
 
-    @property
+
     async def api_request(
             self,
             method: str,
