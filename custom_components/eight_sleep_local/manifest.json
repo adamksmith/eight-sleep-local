@@ -1,0 +1,8 @@
+{
+  "domain": "eight_sleep_local",
+  "name": "Eight Sleep Local",
+  "version": "1.0.0",
+  "requirements": [],
+  "codeowners": [],
+  "iot_class": "local_polling"
+}
