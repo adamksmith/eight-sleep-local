@@ -1,7 +1,7 @@
 import logging
 from datetime import timedelta
 
-from homeassistant.components.sensor import SensorEntity, DEVICE_CLASS_TEMPERATURE
+from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -16,6 +16,9 @@ from custom_components.eight_sleep_local.localEight.device import LocalEightSlee
 _LOGGER = logging.getLogger(__name__)
 
 UPDATE_INTERVAL = timedelta(seconds=5)
+
+# Use the string "temperature" directly for the device class.
+DEVICE_CLASS_TEMPERATURE = "temperature"
 
 SENSOR_TYPES = {
     "current_temp_f": {
