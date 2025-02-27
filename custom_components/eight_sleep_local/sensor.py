@@ -11,56 +11,87 @@ from homeassistant.helpers.update_coordinator import (
 )
 
 from . import DOMAIN
-from .local_eight_sleep import LocalEightSleep
+from custom_components.eight_sleep_local.localEight.device import LocalEightSleep
 
 _LOGGER = logging.getLogger(__name__)
 
-UPDATE_INTERVAL = timedelta(seconds=5)  # Poll every 30s (adjust as desired)
+UPDATE_INTERVAL = timedelta(seconds=5)  # Poll every 5 seconds (adjust as desired)
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback):
+# 1) Mappings for LEFT side
+LEFT_SENSOR_MAP = {
+    "current_temp_f": "currentTemperatureF",
+    "target_temp_f": "targetTemperatureF",
+    "seconds_remaining": "secondsRemaining",
+    "is_alarm_vibrating": "isAlarmVibrating",
+    "is_on": "isOn",
+}
+
+# 2) Mappings for RIGHT side
+RIGHT_SENSOR_MAP = {
+    "current_temp_f": "currentTemperatureF",
+    "target_temp_f": "targetTemperatureF",
+    "seconds_remaining": "secondsRemaining",
+    "is_alarm_vibrating": "isAlarmVibrating",
+    "is_on": "isOn",
+}
+
+# 3) Mappings for HUB-level sensors
+HUB_SENSOR_MAP = {
+    "is_priming": "isPriming",
+    "water_level": "waterLevel",
+    "sensor_label": "sensorLabel",
+}
+
+
+async def async_setup_entry(
+        hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+):
     """
-    This is called by Home Assistant to set up sensors.
-    We'll:
-      1. Create a LocalEightSleep client.
-      2. Create a DataUpdateCoordinator to poll that client.
-      3. Create sensor entities for the left side and the right side,
-         and pass them to Home Assistant.
+    Set up sensors from a config entry. We:
+      1. Create the LocalEightSleep client.
+      2. Create a DataUpdateCoordinator for periodic data fetching.
+      3. Create separate sensors for:
+         - The left side
+         - The right side
+         - The hub
+      4. Add them all to Home Assistant.
     """
 
-    # Example of retrieving config from the entry
+    # Read host/port from the config entry
     host = entry.data.get("host", "localhost")
     port = entry.data.get("port", 8080)
 
     client = LocalEightSleep(host=host, port=port)
-
     await client.start()
-    # Create a coordinator to manage fetching data
-    coordinator = EightSleepDataUpdateCoordinator(hass, client=client, update_interval=UPDATE_INTERVAL)
 
-    # Initialize the coordinator (fetch initial data)
+    # Create a DataUpdateCoordinator
+    coordinator = EightSleepDataUpdateCoordinator(
+        hass, client=client, update_interval=UPDATE_INTERVAL
+    )
+
+    # Fetch initial data
     await coordinator.async_config_entry_first_refresh()
 
-    # Create sensor entities for left & right sides
+    # 1) Create sensors for the LEFT device
     left_entities = [
-        EightSleepSensor(coordinator, "left_current_temp_f", side="left"),
-        EightSleepSensor(coordinator, "left_target_temp_f", side="left"),
-        EightSleepSensor(coordinator, "left_seconds_remaining", side="left"),
-        EightSleepSensor(coordinator, "left_is_alarm_vibrating", side="left"),
-        EightSleepSensor(coordinator, "left_is_on", side="left"),
+        EightSleepSensor(coordinator, side="left", attribute_key=attr_key)
+        for attr_key in LEFT_SENSOR_MAP
     ]
 
+    # 2) Create sensors for the RIGHT device
     right_entities = [
-        EightSleepSensor(coordinator, "right_current_temp_f", side="right"),
-        EightSleepSensor(coordinator, "right_target_temp_f", side="right"),
-        EightSleepSensor(coordinator, "right_seconds_remaining", side="right"),
-        EightSleepSensor(coordinator, "right_is_alarm_vibrating", side="right"),
-        EightSleepSensor(coordinator, "right_is_on", side="right"),
+        EightSleepSensor(coordinator, side="right", attribute_key=attr_key)
+        for attr_key in RIGHT_SENSOR_MAP
+    ]
+
+    # 3) Create sensors for the HUB device (non-side-specific)
+    hub_entities = [
+        EightSleepSensor(coordinator, side="hub", attribute_key=attr_key)
+        for attr_key in HUB_SENSOR_MAP
     ]
 
     # Add them all
-    async_add_entities(left_entities + right_entities)
-
-    # Optionally, you could add other sensors like is_priming, water_level, etc. as separate sensors.
+    async_add_entities(left_entities + right_entities + hub_entities)
 
 
 class EightSleepDataUpdateCoordinator(DataUpdateCoordinator):
@@ -80,11 +111,10 @@ class EightSleepDataUpdateCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self):
         """
         Actually fetch the latest data from the local device.
-        This is called automatically by the DataUpdateCoordinator at intervals.
         """
         try:
             await self.client.update_device_data()
-            return self.client.device_data  # store the latest JSON in 'data'
+            return self.client.device_data  # coordinator.data = latest JSON
         except Exception as err:
             _LOGGER.error("Error updating Eight Sleep local data: %s", err)
             raise err
@@ -92,78 +122,81 @@ class EightSleepDataUpdateCoordinator(DataUpdateCoordinator):
 
 class EightSleepSensor(CoordinatorEntity, SensorEntity):
     """
-    A sensor for one side of the bed.
-    Reads from the coordinator's .data property.
+    A sensor representing either:
+      - Left side attribute
+      - Right side attribute
+      - Hub attribute
+
+    `side` determines which portion of JSON to read:
+      - "left"  -> data["left"]
+      - "right" -> data["right"]
+      - "hub"   -> data at the root of the JSON
     """
 
-    def __init__(self, coordinator, attribute_name, side):
+    def __init__(self, coordinator, side: str, attribute_key: str):
         super().__init__(coordinator)
-        self._attr_name = f"Eight Sleep {side.capitalize()} {attribute_name}"
-        self._attr_unique_id = f"eight_sleep_{side}_{attribute_name}"
         self.side = side
-        self.attribute_name = attribute_name
+        self.attribute_key = attribute_key
+
+        # Build a user-friendly name. "left_current_temp_f" -> "Left Current Temp F"
+        # or "hub_is_priming" -> "Hub Is Priming"
+        side_label = side.capitalize()
+        attr_label = attribute_key.replace("_", " ").title()
+
+        self._attr_name = f"Eight Sleep {side_label} {attr_label}"
+
+        # For a stable unique_id, incorporate side + attribute
+        # e.g., "eight_sleep_left_current_temp_f"
+        self._attr_unique_id = f"eight_sleep_{side}_{attribute_key}"
 
     @property
     def native_value(self):
         """
         Return the sensor's current value from coordinator.data.
-        For example, if self.attribute_name is 'left_current_temp_f',
-        we read that from the coordinator’s data if available.
         """
         data = self.coordinator.data or {}
-        # We can rely on the local_eight_sleep properties, or parse directly from JSON:
-        # But we used property names in local_eight_sleep, so let's do direct JSON read:
 
-        # If you prefer using the LocalEightSleep object properties (e.g. self.client.left_current_temp_f),
-        # you can do so, but typically we'd use the coordinator.data snapshot for performance.
+        # If it's a side-based attribute...
+        if self.side in ("left", "right"):
+            side_data = data.get(self.side, {})
 
-        # Example if attribute_name = "left_current_temp_f", we can parse:
-        if self.attribute_name == "left_current_temp_f":
-            left_side = data.get("left", {})
-            return left_side.get("currentTemperatureF")
-        elif self.attribute_name == "left_target_temp_f":
-            left_side = data.get("left", {})
-            return left_side.get("targetTemperatureF")
-        elif self.attribute_name == "left_seconds_remaining":
-            left_side = data.get("left", {})
-            return left_side.get("secondsRemaining")
-        elif self.attribute_name == "left_is_alarm_vibrating":
-            left_side = data.get("left", {})
-            return left_side.get("isAlarmVibrating")
-        elif self.attribute_name == "left_is_on":
-            left_side = data.get("left", {})
-            return left_side.get("isOn")
+            # Map the attribute_key to the JSON key
+            if self.side == "left":
+                json_key = LEFT_SENSOR_MAP.get(self.attribute_key)
+            else:  # "right"
+                json_key = RIGHT_SENSOR_MAP.get(self.attribute_key)
 
-        elif self.attribute_name == "right_current_temp_f":
-            right_side = data.get("right", {})
-            return right_side.get("currentTemperatureF")
-        elif self.attribute_name == "right_target_temp_f":
-            right_side = data.get("right", {})
-            return right_side.get("targetTemperatureF")
-        elif self.attribute_name == "right_seconds_remaining":
-            right_side = data.get("right", {})
-            return right_side.get("secondsRemaining")
-        elif self.attribute_name == "right_is_alarm_vibrating":
-            right_side = data.get("right", {})
-            return right_side.get("isAlarmVibrating")
-        elif self.attribute_name == "right_is_on":
-            right_side = data.get("right", {})
-            return right_side.get("isOn")
+            return side_data.get(json_key) if json_key else None
 
-        # fallback
+        # Otherwise, it's the HUB device. We read from the root.
+        if self.side == "hub":
+            json_key = HUB_SENSOR_MAP.get(self.attribute_key)
+            return data.get(json_key) if json_key else None
+
         return None
 
     @property
     def device_info(self):
         """
-        Return a device dictionary so that left and right sensors
-        group under distinct devices in Home Assistant's device registry.
+        Return separate device_info so that:
+          - left side = "Eight Sleep – Left"
+          - right side = "Eight Sleep – Right"
+          - hub        = "Eight Sleep – Hub"
+        Each device_info has a unique identifier, so all sensors for that side
+        or the hub group under a separate device in HA.
         """
-        # We’ll differentiate the left and right side by unique IDs
-        # and by naming them “Eight Sleep – Left” vs “Eight Sleep – Right”
+        host = self.coordinator.client._host
+        port = self.coordinator.client._port
+
+        # e.g., "eight_sleep_left_device_192.168.1.50_8080"
         return {
-            "identifiers": {(DOMAIN, f"eight_sleep_{self.side}_device")},
+            "identifiers": {
+                (
+                    DOMAIN,
+                    f"eight_sleep_{self.side}_device_{host}_{port}",
+                )
+            },
             "name": f"Eight Sleep – {self.side.capitalize()}",
             "manufacturer": "Eight Sleep (Local)",
-            "model": "Pod vLocal",  # You can set a custom model or read from device data
+            "model": "Pod vLocal",
         }
