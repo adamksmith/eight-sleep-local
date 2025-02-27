@@ -44,7 +44,7 @@ SENSOR_TYPES = {
         "json_key": "isAlarmVibrating"
     },
     "is_on": {
-        "name": "Device On",
+        "name": "Side On",
         "unit": None,
         "json_key": "isOn"
     },
