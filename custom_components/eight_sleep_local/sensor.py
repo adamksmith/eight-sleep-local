@@ -23,14 +23,14 @@ DEVICE_CLASS_TEMPERATURE = "temperature"
 
 SENSOR_TYPES = {
     "current_temp_f": {
-        "name": "Current Temperature (F)",
+        "name": "Current Temperature",
         "unit": "°F",
         "json_key": "currentTemperatureF",
         "device_class": DEVICE_CLASS_TEMPERATURE,
         "binary": False,
     },
     "target_temp_f": {
-        "name": "Target Temperature (F)",
+        "name": "Target Temperature",
         "unit": "°F",
         "json_key": "targetTemperatureF",
         "device_class": DEVICE_CLASS_TEMPERATURE,
@@ -43,13 +43,13 @@ SENSOR_TYPES = {
         "binary": False,
     },
     "is_alarm_vibrating": {
-        "name": "Alarm Vibrating",
+        "name": "Alarm Active",
         "unit": None,
         "json_key": "isAlarmVibrating",
         "binary": True,
     },
     "is_on": {
-        "name": "Device On",
+        "name": "Side On",
         "unit": None,
         "json_key": "isOn",
         "binary": True,
@@ -185,7 +185,7 @@ class EightSleepBinarySensor(CoordinatorEntity, BinarySensorEntity):
         sensor_info = SENSOR_TYPES[self.attribute_key]
         friendly_name = sensor_info["name"]
 
-        self._attr_name = f"Eight Sleep {side.capitalize()} {friendly_name}"
+        self._attr_name = f"{friendly_name}"
         self._attr_unique_id = f"eight_sleep_{side}_{attribute_key}"
         # Optionally set a device class for binary sensors if needed.
         if sensor_info.get("device_class"):
