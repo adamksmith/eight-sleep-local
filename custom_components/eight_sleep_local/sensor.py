@@ -22,13 +22,13 @@ DEVICE_CLASS_TEMPERATURE = "temperature"
 
 SENSOR_TYPES = {
     "current_temp_f": {
-        "name": "Current Temperature (F)",
+        "name": "Current Temperature",
         "unit": "°F",
         "json_key": "currentTemperatureF",
         "device_class": DEVICE_CLASS_TEMPERATURE,
     },
     "target_temp_f": {
-        "name": "Target Temperature (F)",
+        "name": "Target Temperature",
         "unit": "°F",
         "json_key": "targetTemperatureF",
         "device_class": DEVICE_CLASS_TEMPERATURE,
@@ -124,7 +124,7 @@ class EightSleepSensor(CoordinatorEntity, SensorEntity):
         unit_of_measurement = sensor_info["unit"]
 
         # For display: e.g. "Eight Sleep Left Current Temperature (F)"
-        self._attr_name = f"Eight Sleep {side.capitalize()} {friendly_name}"
+        self._attr_name = f"{friendly_name}"
         self._attr_unique_id = f"eight_sleep_{side}_{attribute_key}"
         self._attr_native_unit_of_measurement = unit_of_measurement
 
