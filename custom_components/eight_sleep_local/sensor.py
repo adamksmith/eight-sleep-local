@@ -48,6 +48,17 @@ SENSOR_TYPES = {
         "unit": None,
         "json_key": "isOn"
     },
+    # Added hub attributes definitions:
+    "is_priming": {
+        "name": "Is Priming",
+        "unit": None,
+        "json_key": "isPriming",
+    },
+    "water_level": {
+        "name": "Water Level",
+        "unit": None,
+        "json_key": "waterLevel",
+    },
 }
 
 # Which attributes do we want on the left side, right side, and hub?
